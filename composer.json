@@ -8,17 +8,17 @@
     }
   ],
   "require": {
-    "php": "^8.1",
+    "php": "^8.2",
     "ext-dom": "*",
     "fabpot/goutte": "^4.0",
-    "guzzlehttp/guzzle": "^7.0.1",
-    "illuminate/support": "^9.0",
-    "symfony/css-selector": "^5.3",
-    "symfony/dom-crawler": "^5.3",
-    "vlucas/phpdotenv": "^5.4"
+    "guzzlehttp/guzzle": "^7.5",
+    "illuminate/support": "^10.4",
+    "symfony/css-selector": "^6.2",
+    "symfony/dom-crawler": "^6.2",
+    "vlucas/phpdotenv": "^5.5"
   },
   "require-dev": {
-    "blumilksoftware/codestyle": "^0.10"
+    "blumilksoftware/codestyle": "^2.0"
   },
   "config": {
     "optimize-autoloader": true,
@@ -30,7 +30,7 @@
     }
   },
   "scripts": {
-    "ecs": "./vendor/bin/ecs check",
-    "ecsf": "./vendor/bin/ecs check --fix"
+    "cs": "./vendor/bin/php-cs-fixer fix --dry-run --diff --config ecs.php",
+    "csf": "./vendor/bin/php-cs-fixer fix --diff --config ecs.php"
   }
 }
