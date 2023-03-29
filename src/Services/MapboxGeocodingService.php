@@ -104,42 +104,44 @@ class MapboxGeocodingService
         }
     }
 
-    public function getCityNameFromCoordinates(float $latitude, float $longitude): ?string
+    public function getPlaceFromCoordinates(float $latitude, float $longitude): ?array
     {
         $coordinatesKey = "{$latitude},{$longitude}";
-
+    
         return $this->getFromCacheOrCreate(
             'coordinates',
             $coordinatesKey,
-            fn() => $this->getCityNameFromAPI($latitude, $longitude)
+            fn() => $this->getPlaceFromAPI($latitude, $longitude)
         );
     }
-
-    protected function getCityNameFromAPI(float $latitude, float $longitude): ?string
+    
+    protected function getPlaceFromAPI(float $latitude, float $longitude): ?array
     {
         $client = new Client();
-
+    
         try {
             $response = $client->get(
-                "https://api.mapbox.com/geocoding/v5/mapbox.places/{$longitude},{$latitude}.json?access_token={$this->token}&types=place",
+                "https://api.mapbox.com/geocoding/v5/mapbox.places/{$longitude},{$latitude}.json?access_token={$this->token}&types=place,country",
             );
-
+    
             $responseArray = json_decode($response->getBody()->getContents(), true);
-
+    
             if (empty($responseArray["features"])) {
-                echo "City name for coordinates {$latitude},{$longitude} was not found." . PHP_EOL;
+                echo "City and country name for coordinates {$latitude},{$longitude} was not found." . PHP_EOL;
                 return null;
             }
-
+    
             $cityName = $responseArray["features"][0]["text"];
-            $this->updateCache('coordinates', "{$latitude},{$longitude}", $cityName);
-
-            return $cityName;
+            $countryName = $responseArray["features"][1]["text"];
+            $this->updateCache('coordinates', "{$latitude},{$longitude}", [$cityName, $countryName]);
+    
+            return [$cityName, $countryName];
         } catch (GuzzleException) {
-            echo "City name for coordinates {$latitude},{$longitude} was not fetched." . PHP_EOL;
+            echo "City and country name for coordinates {$latitude},{$longitude} was not fetched." . PHP_EOL;
             return null;
         }
     }
+    
 
     protected function updateCache(string $type, string $key, mixed $value): void
     {
