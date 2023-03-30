@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace EScooters\Importers;
 
 use EScooters\Importers\DataSources\JsonDataSource;
-use EScooters\Normalizers\CountryNamesNormalizer;
 
 class TierDataImporter extends DataImporter implements JsonDataSource
 {
@@ -21,6 +20,7 @@ class TierDataImporter extends DataImporter implements JsonDataSource
         $json = file_get_contents("https://www.tier.app/page-data/sq/d/134304685.json");
         $this->entries = json_decode($json, associative: true)["data"]["craft"]["entries"];
 
+        $this->entries = array_filter($this->entries, fn($entry) => $entry["siteId"] === 3);
         return $this;
     }
 
@@ -33,22 +33,13 @@ class TierDataImporter extends DataImporter implements JsonDataSource
                 continue;
             }
 
-            if ($entry["title"] === "Sverige Göteborg") {
-                continue;
-            }
-
             $previousCountryName = $entry["title"];
 
-            $countryName = CountryNamesNormalizer::normalize($entry["title"]);
-            $country = $this->countries->retrieve($countryName);
+            $country = $this->countries->retrieve($entry["title"]);
 
             $cities = explode(",", $entry["headline"]);
             foreach ($cities as $cityName) {
                 $cityName = trim($cityName);
-
-                if ($cityName === "Kundtjänst" || $cityName === "Dornbirndie") {
-                    continue;
-                }
 
                 $city = $this->cities->retrieve($cityName, $country);
                 $this->provider->addCity($city);
