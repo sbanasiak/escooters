@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace EScooters\Importers;
 
+use DOMElement;
 use EScooters\Importers\DataSources\HtmlDataSource;
-use EScooters\Importers\DataSources\JsonDataSource;
-use EScooters\Utils\HardcodedCitiesToCountriesAssigner;
-use GuzzleHttp\Client;
+use Symfony\Component\DomCrawler\Crawler;
 
-class DottDataImporter extends DataImporter implements HtmlDataSource, JsonDataSource
+class DottDataImporter extends DataImporter implements HtmlDataSource
 {
-    protected array $markers = [];
+    protected Crawler $sections;
 
     public function getBackground(): string
     {
@@ -20,35 +19,28 @@ class DottDataImporter extends DataImporter implements HtmlDataSource, JsonDataS
 
     public function extract(): static
     {
-        $client = new Client();
-        $response = $client->get("https://ridedott.com/iframe/map-iframe")->getBody()->getContents();
-        $script = explode("const DATA = '", $response)[1];
-        $script = explode("';</script><script>const", $script);
+        $html = file_get_contents("https://ridedott.com/ride-with-us/paris/");
 
-        $json = json_decode($script[0], true);
-        $this->markers = $json["markers"];
-
+        $crawler = new Crawler($html);
+        $this->sections = $crawler->filter('li.mb-4.last\:mb-0');
         return $this;
     }
 
+
     public function transform(): static
     {
-        foreach ($this->markers as $marker) {
-            $url = $marker["url"];
-            $parts = explode("/", $url);
+        foreach ($this->sections as $section) {
+            $countryText = trim($section->getElementsByTagName('span')[0]->nodeValue);
+            $country = $this->countries->retrieve($countryText);
 
-            $cityName = ucfirst($parts[count($parts) - 1]);
-
-            $country = null;
-            $hardcoded = HardcodedCitiesToCountriesAssigner::assign($cityName);
-            if ($hardcoded) {
-                $country = $this->countries->retrieve($hardcoded);
+            foreach ($section->getElementsByTagName('a') as $city) {
+                $cityText = trim($city->nodeValue);
+                $city = $this->cities->retrieve($cityText, $country);
+                $this->provider->addCity($city);
             }
-
-            $city = $this->cities->retrieve($cityName, $country);
-            $this->provider->addCity($city);
         }
 
         return $this;
     }
+
 }
