@@ -15,7 +15,7 @@ class BITMobilityDataImporter extends DataImporter implements HtmlDataSource
 
     public function getBackground(): string
     {
-        return "#D6213F";
+        return "#f2f2f2";
     }
 
     public function extract(): static
