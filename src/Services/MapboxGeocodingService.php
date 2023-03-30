@@ -11,6 +11,9 @@ use GuzzleHttp\Exception\GuzzleException;
 
 class MapboxGeocodingService
 {
+    private static $instance;
+    private ?string $token = null;
+    
     protected const CACHE_FILENAMES = [
         'city' => "./.mapbox_city_cache",
         'country' => "./.mapbox_country_cache",
@@ -24,14 +27,22 @@ class MapboxGeocodingService
     ];
 
     public function __construct(
-        protected string $token,
+        //protected string $token,
     ) {
+        $this->token = $_ENV["VUE_APP_MAPBOX_TOKEN"];
         foreach (self::CACHE_FILENAMES as $type => $filename) {
             if (file_exists($filename)) {
                 echo "Cache {$type} loaded." . PHP_EOL;
                 $this->cache[$type] = json_decode(file_get_contents($filename), true);
             }
         }
+    }
+
+    public static function getInstance() {
+        if (!isset(self::$instance)) {
+            self::$instance = new self();
+        }
+        return self::$instance;
     }
 
     public function setCoordinatesToCities(Cities $cities): static
