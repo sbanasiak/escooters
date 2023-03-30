@@ -15,7 +15,9 @@ use EScooters\Importers\QuickDataImporter;
 use EScooters\Importers\SpinDataImporter;
 use EScooters\Importers\TierDataImporter;
 use EScooters\Importers\VoiDataImporter;
+use EScooters\Importers\BITMobilityDataImporter;
 use EScooters\Importers\WhooshDataImporter;
+use EScooters\Importers\HulajDataImporter;
 use EScooters\Models\Repositories\Cities;
 use EScooters\Models\Repositories\Countries;
 use EScooters\Models\Repositories\Providers;
@@ -24,7 +26,8 @@ use EScooters\Services\QuickChartIconsService;
 use EScooters\Utils\BuildInfo;
 
 Dotenv::createImmutable(__DIR__)->load();
-$token = $_ENV["VUE_APP_MAPBOX_TOKEN"];
+
+$mapbox = MapboxGeocodingService::getInstance();
 
 $cities = new Cities();
 $countries = new Countries();
@@ -32,18 +35,20 @@ $providers = new Providers();
 
 /** @var array<DataImporter> $dataImporters */
 $dataImporters = [
-    new BoltDataImporter($cities, $countries),
-    new LimeDataImporter($cities, $countries),
-    new QuickDataImporter($cities, $countries),
-    new TierDataImporter($cities, $countries),
+    new TierDataImporter($cities, $countries, $mapbox),
+    new BITMobilityDataImporter($cities, $countries),
+    new HulajDataImporter($cities, $countries),
     new VoiDataImporter($cities, $countries),
-    new LinkDataImporter($cities, $countries),
-    new SpinDataImporter($cities, $countries),
-    new NeuronDataImporter($cities, $countries),
-    new HelbizDataImporter($cities, $countries),
-    new WhooshDataImporter($cities, $countries),
     new BirdDataImporter($cities, $countries),
+    new BoltDataImporter($cities, $countries),
     new DottDataImporter($cities, $countries),
+    new HelbizDataImporter($cities, $countries),
+    //new LimeDataImporter($cities, $countries),
+    new LinkDataImporter($cities, $countries),
+    new NeuronDataImporter($cities, $countries),
+    new QuickDataImporter($cities, $countries),
+    new SpinDataImporter($cities, $countries),
+    new WhooshDataImporter($cities, $countries),
 ];
 
 $timestamp = date("Y-m-d H:i:s");
@@ -65,11 +70,10 @@ foreach ($dataImporters as $dataImporter) {
 $count = count($cities->all());
 echo PHP_EOL . "$count cities fetched." . PHP_EOL;
 
-$mapbox = new MapboxGeocodingService($token);
 $mapbox->setCoordinatesToCities($cities);
 
-$mapbox = new QuickChartIconsService();
-$mapbox->generateCityIcons($cities);
+$icons = new QuickChartIconsService();
+$icons->generateCityIcons($cities);
 
 $info = new BuildInfo(
     timestamp: $timestamp,

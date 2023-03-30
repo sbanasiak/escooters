@@ -11,23 +11,22 @@ use GuzzleHttp\Exception\GuzzleException;
 
 class MapboxGeocodingService
 {
-    private static $instance;
-    private ?string $token = null;
-    
     protected const CACHE_FILENAMES = [
-        'city' => "./.mapbox_city_cache",
-        'country' => "./.mapbox_country_cache",
-        'coordinates' => "./.mapbox_coordinates_cache",
+        "city" => "./.mapbox_city_cache",
+        "country" => "./.mapbox_country_cache",
+        "coordinates" => "./.mapbox_coordinates_cache",
     ];
 
     protected array $cache = [
-        'city' => [],
-        'country' => [],
-        'coordinates' => [],
+        "city" => [],
+        "country" => [],
+        "coordinates" => [],
     ];
+    private static $instance;
+    private ?string $token = null;
 
     public function __construct(
-        //protected string $token,
+        // protected string $token,
     ) {
         $this->token = $_ENV["VUE_APP_MAPBOX_TOKEN"];
         foreach (self::CACHE_FILENAMES as $type => $filename) {
@@ -38,7 +37,8 @@ class MapboxGeocodingService
         }
     }
 
-    public static function getInstance() {
+    public static function getInstance()
+    {
         if (!isset(self::$instance)) {
             self::$instance = new self();
         }
@@ -50,9 +50,9 @@ class MapboxGeocodingService
         foreach ($cities->all() as $city) {
             $cityId = $city->getId();
             $coordinates = $this->getFromCacheOrCreate(
-                'city',
+                "city",
                 $cityId,
-                fn() => $this->getCityFromAPI($city)
+                fn() => $this->getCityFromAPI($city),
             );
             if ($coordinates !== null) {
                 $city->setCoordinates($coordinates);
@@ -60,6 +60,26 @@ class MapboxGeocodingService
         }
 
         return $this;
+    }
+
+    public function normalizeCountryName(string $unnormalizedName): ?string
+    {
+        return $this->getFromCacheOrCreate(
+            "country",
+            $unnormalizedName,
+            fn() => $this->getCountryFromAPI($unnormalizedName),
+        );
+    }
+
+    public function getPlaceFromCoordinates(float $latitude, float $longitude): ?array
+    {
+        $coordinatesKey = "{$latitude},{$longitude}";
+
+        return $this->getFromCacheOrCreate(
+            "coordinates",
+            $coordinatesKey,
+            fn() => $this->getPlaceFromAPI($latitude, $longitude),
+        );
     }
 
     protected function getCityFromAPI(City $city): ?array
@@ -79,21 +99,12 @@ class MapboxGeocodingService
             }
             $coordinates = $responseArray["features"][0]["center"];
 
-            $this->updateCache('city', $city->getId(), $coordinates);
+            $this->updateCache("city", $city->getId(), $coordinates);
             return $coordinates;
         } catch (GuzzleException) {
             echo "Coordinates for {$name} were not fetched." . PHP_EOL;
             return null;
         }
-    }
-
-    public function normalizeCountryName(string $unnormalizedName): ?string
-    {
-        return $this->getFromCacheOrCreate(
-            'country',
-            $unnormalizedName,
-            fn() => $this->getCountryFromAPI($unnormalizedName)
-        );
     }
 
     protected function getCountryFromAPI(string $unnormalizedName): ?string
@@ -113,7 +124,7 @@ class MapboxGeocodingService
             }
 
             $normalizedCountry = $responseArray["features"][0]["text"];
-            $this->updateCache('country', $unnormalizedName, $normalizedCountry);
+            $this->updateCache("country", $unnormalizedName, $normalizedCountry);
 
             return $normalizedCountry;
         } catch (GuzzleException) {
@@ -122,44 +133,32 @@ class MapboxGeocodingService
         }
     }
 
-    public function getPlaceFromCoordinates(float $latitude, float $longitude): ?array
-    {
-        $coordinatesKey = "{$latitude},{$longitude}";
-    
-        return $this->getFromCacheOrCreate(
-            'coordinates',
-            $coordinatesKey,
-            fn() => $this->getPlaceFromAPI($latitude, $longitude)
-        );
-    }
-    
     protected function getPlaceFromAPI(float $latitude, float $longitude): ?array
     {
         $client = new Client();
-    
+
         try {
             $response = $client->get(
                 "https://api.mapbox.com/geocoding/v5/mapbox.places/{$longitude},{$latitude}.json?access_token={$this->token}&types=place,country",
             );
-    
+
             $responseArray = json_decode($response->getBody()->getContents(), true);
-    
+
             if (empty($responseArray["features"])) {
                 echo "City and country name for coordinates {$latitude},{$longitude} was not found." . PHP_EOL;
                 return null;
             }
-    
+
             $cityName = $responseArray["features"][0]["text"];
             $countryName = $responseArray["features"][1]["text"];
-            $this->updateCache('coordinates', "{$latitude},{$longitude}", [$cityName, $countryName]);
-    
+            $this->updateCache("coordinates", "{$latitude},{$longitude}", [$cityName, $countryName]);
+
             return [$cityName, $countryName];
         } catch (GuzzleException) {
             echo "City and country name for coordinates {$latitude},{$longitude} was not fetched." . PHP_EOL;
             return null;
         }
-    }
-    
+    }    
 
     protected function updateCache(string $type, string $key, mixed $value): void
     {
@@ -182,4 +181,3 @@ class MapboxGeocodingService
         return $value;
     }
 }
-

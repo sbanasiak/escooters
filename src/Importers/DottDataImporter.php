@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace EScooters\Importers;
 
-use DOMElement;
 use EScooters\Importers\DataSources\HtmlDataSource;
 use Symfony\Component\DomCrawler\Crawler;
 
@@ -26,14 +25,13 @@ class DottDataImporter extends DataImporter implements HtmlDataSource
         return $this;
     }
 
-
     public function transform(): static
     {
         foreach ($this->sections as $section) {
-            $countryText = trim($section->getElementsByTagName('span')[0]->nodeValue);
+            $countryText = trim($section->getElementsByTagName("span")[0]->nodeValue);
             $country = $this->countries->retrieve($countryText);
 
-            foreach ($section->getElementsByTagName('a') as $city) {
+            foreach ($section->getElementsByTagName("a") as $city) {
                 $cityText = trim($city->nodeValue);
                 $city = $this->cities->retrieve($cityText, $country);
                 $this->provider->addCity($city);
@@ -42,5 +40,4 @@ class DottDataImporter extends DataImporter implements HtmlDataSource
 
         return $this;
     }
-
 }
