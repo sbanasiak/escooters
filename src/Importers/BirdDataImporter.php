@@ -9,6 +9,7 @@ use EScooters\Exceptions\CityNotAssignedToAnyCountryException;
 use EScooters\Importers\DataSources\HtmlDataSource;
 use EScooters\Utils\HardcodedCitiesToCountriesAssigner;
 use Symfony\Component\DomCrawler\Crawler;
+use EScooters\Services\MapboxGeocodingService;
 
 class BirdDataImporter extends DataImporter implements HtmlDataSource
 {
@@ -22,54 +23,34 @@ class BirdDataImporter extends DataImporter implements HtmlDataSource
     public function extract(): static
     {
         $html = file_get_contents("https://www.bird.co/map/");
-
         $crawler = new Crawler($html);
-        $this->sections = $crawler->filter("ul.region-list");
+
+        $this->sections = $crawler->filter('body script')->first();
 
         return $this;
     }
 
     public function transform(): static
-    {
-        /** @var DOMElement $section */
-        foreach ($this->sections as $section) {
-            $country = null;
+    {    
+        $mapbox = MapboxGeocodingService::getInstance();
 
-            foreach ($section->childNodes as $node) {
-                if ($country === null || $country->getId() !== "us") {
-                    $country = null;
-                }
-
-                $value = trim($node->nodeValue);
-                if ($value) {
-                    if ($node->getAttribute("class") === "region-title") {
-                        if ($value === "United States") {
-                            $country = $this->countries->retrieve("United States");
-                        } else {
-                            continue;
-                        }
-                    }
-
-                    if (str_contains($value, "University")) {
-                        break;
-                    }
-
-                    try {
-                        $hardcoded = HardcodedCitiesToCountriesAssigner::assign($value);
-                        if ($hardcoded) {
-                            $country = $this->countries->retrieve($hardcoded);
-                        }
-
-                        $city = $this->cities->retrieve($value, $country);
-                        $this->provider->addCity($city);
-                    } catch (CityNotAssignedToAnyCountryException $exception) {
-                        echo $exception->getMessage() . PHP_EOL;
-                        continue;
-                    }
-                }
+        $javascriptCode = $this->sections->text();
+        
+        preg_match('/let features = \[(.*?)\];/', $javascriptCode, $matches);
+        preg_match_all('/new google.maps.LatLng\(([^\)]+)\)/', $matches[1], $matches);
+    
+        foreach ($matches[1] as $match) {
+            [$latitude, $longitude] = array_map('trim', explode(',', $match));
+            if (!empty($latitude) && !empty($longitude)) {
+                $location = $mapbox->getPlaceFromCoordinates((float)$latitude, (float)$longitude);
+                $country = $this->countries->retrieve($location[1]);
+                $city = $this->cities->retrieve($location[0], $country);
+                $this->provider->addCity($city);
             }
         }
-
+    
         return $this;
     }
+    
+    
 }
