@@ -10,6 +10,7 @@ class City implements JsonSerializable
 {
     /** @var array<string, Provider> */
     protected array $providers = [];
+
     protected array $coordinates = [
         "lat" => null,
         "lng" => null,

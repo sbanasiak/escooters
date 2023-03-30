@@ -21,10 +21,10 @@ class LinkDataImporter extends DataImporter implements HtmlDataSource
     public function extract(): static
     {
         $client = new Client();
-        $html = $client->get("http://www.link.city/cities")->getBody()->getContents();
+        $html = $client->get("https://superpedestrian.com/locations")->getBody()->getContents();
 
         $crawler = new Crawler($html);
-        $this->sections = $crawler->filter("#content .sqs-row.row > .col p > strong");
+        $this->sections = $crawler->filter(".Main-content .sqs-row.row > .col p > strong");
 
         return $this;
     }
@@ -35,9 +35,6 @@ class LinkDataImporter extends DataImporter implements HtmlDataSource
         foreach ($this->sections as $section) {
             foreach ($section->childNodes as $node) {
                 $countryName = trim($node->nodeValue);
-                if (in_array($countryName, ["Tech-Enabled Compliance", "COVID-19 RAPID RESPONSE CASE STUDY"], true)) {
-                    continue;
-                }
 
                 $country = $this->countries->retrieve($countryName);
 
@@ -47,9 +44,6 @@ class LinkDataImporter extends DataImporter implements HtmlDataSource
                     }
 
                     $name = $cityName->nodeValue;
-                    if ($country->getId() === "us" && str_contains($name, ", ")) {
-                        $name = explode(",", $name)[0];
-                    }
 
                     $cities = [];
                     if (str_contains($name, "(") && str_contains($name, ")")) {

@@ -7,37 +7,37 @@ namespace EScooters\Importers;
 use EScooters\Importers\DataSources\HtmlDataSource;
 use Symfony\Component\DomCrawler\Crawler;
 
-class DottDataImporter extends DataImporter implements HtmlDataSource
+class BITMobilityDataImporter extends DataImporter implements HtmlDataSource
 {
+    protected const FIXED_COUNTRY = "Italy";
+
     protected Crawler $sections;
 
     public function getBackground(): string
     {
-        return "#F5C605";
+        return "#f2f2f2";
     }
 
     public function extract(): static
     {
-        $html = file_get_contents("https://ridedott.com/ride-with-us/paris/");
+        $html = file_get_contents("https://bitmobility.it/dove-siamo/");
 
         $crawler = new Crawler($html);
-        $this->sections = $crawler->filter('li.mb-4.last\:mb-0');
+        $this->sections = $crawler->filter(".wpb_column.vc_column_container.vc_col-sm-6");
         return $this;
     }
 
     public function transform(): static
     {
-        foreach ($this->sections as $section) {
-            $countryText = trim($section->getElementsByTagName("span")[0]->nodeValue);
-            $country = $this->countries->retrieve($countryText);
+        $country = $this->countries->retrieve(static::FIXED_COUNTRY);
 
+        foreach ($this->sections as $section) {
             foreach ($section->getElementsByTagName("a") as $city) {
                 $cityText = trim($city->nodeValue);
                 $city = $this->cities->retrieve($cityText, $country);
                 $this->provider->addCity($city);
             }
         }
-
         return $this;
     }
 }

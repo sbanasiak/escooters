@@ -11,8 +11,8 @@ class BuildInfo implements JsonSerializable
     public function __construct(
         protected string $timestamp,
         protected int $citiesCount,
-        protected int $providersCount
-    ) {    }
+        protected int $providersCount,
+    ) {}
 
     public function jsonSerialize(): array
     {
