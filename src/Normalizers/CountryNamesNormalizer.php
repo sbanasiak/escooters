@@ -1,8 +1,9 @@
 <?php
 
 declare(strict_types=1);
-
 namespace EScooters\Normalizers;
+
+use EScooters\Services\MapboxGeocodingService;
 
 class CountryNamesNormalizer
 {
@@ -12,13 +13,14 @@ class CountryNamesNormalizer
             return "United States";
         }
 
+        $mapbox = MapboxGeocodingService::getInstance();
         return match ($name) {
             "Czech Republic" => "Czechia",
             "UAE" => "United Arab Emirates",
             "Uk" => "United Kingdom",
             "Sverige" => "Sweden",
             "Dinamarca" => "Denmark",
-            default => $name,
+            default => $mapbox->normalizeCountryName($name),
         };
     }
 

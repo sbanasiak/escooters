@@ -8,7 +8,6 @@ use EScooters\Models\Country;
 use EScooters\Normalizers\CountryNamesNormalizer;
 use EScooters\Utils\CountryCode;
 use JsonSerializable;
-use EScooters\Services\MapboxGeocodingService;
 
 class Countries implements JsonSerializable
 {
@@ -17,9 +16,7 @@ class Countries implements JsonSerializable
 
     public function retrieve(string $name): Country
     {
-        $mapbox = MapboxGeocodingService::getInstance();
-
-        $name = $mapbox->normalizeCountryName($name);
+        $name = CountryNamesNormalizer::normalize($name);
         $code = CountryCode::NAMES_TO_CODES[$name];
 
         if (array_key_exists($code, $this->countries)) {
