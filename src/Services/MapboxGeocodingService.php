@@ -58,9 +58,16 @@ class MapboxGeocodingService
 
         try {
             $response = $client->get(
-                "https://api.mapbox.com/geocoding/v5/mapbox.places/{$name}.json?access_token={$this->token}&types=place",
+                "https://api.mapbox.com/geocoding/v5/mapbox.places/{$name}.json?access_token={$this->token}&country={$city->getCountry()->getId()}",
             );
-            $coordinates = json_decode($response->getBody()->getContents(), true)["features"][0]["center"];
+            $responseArray = json_decode($response->getBody()->getContents(), true);
+
+            if (empty($responseArray["features"])) {
+                echo "City $name was not found." . PHP_EOL;
+                return null;
+            }
+            $coordinates = $responseArray["features"][0]["center"];
+
             $this->updateCache('city', $city->getId(), $coordinates);
             return $coordinates;
         } catch (GuzzleException) {
